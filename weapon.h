@@ -8,7 +8,6 @@ using namespace std;
 int getRandomInt(int min_value, int max_value);
 QVector<QPoint> generatePointsAroundCenter(int n, float radius, float centerX, float centerY);
 class Firearm;
-class BladedWeapon;
 class Visitor {
 public:
     virtual void visit(Firearm* firearm, QString actionName) = 0;

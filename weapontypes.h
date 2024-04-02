@@ -9,14 +9,23 @@ private:
     const QString WeaponType = "огнестрельное оружие";
     int PistolsCapacity;
     int CurrentPistolsCapacity;
+    int shotsNum;
+    int bullets_in_the_target;
     QVector<QPoint> genShoot(int i);
 public:
     Firearm();
-    Firearm(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed);
+    Firearm(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity,
+            int shootSpeed, int reloadSpeed, int cleanSpeed, int shotsNum, int bullets_in_the_target);
 
     QString operator [] (int index) override;
 
     static void playSound(QString Url, QMediaPlayer *mediaPlayer);
+
+    int get_shotsNum();
+    void set_shotsNum(int shotsNum);
+
+    int get_bullets_in_the_target();
+    void set_bullets_in_the_target(int bullets_in_the_target);
 
     void SetPistolCapacity(int PistolsCapacity);
     int GetPistolCapacity();
@@ -30,7 +39,8 @@ public:
     QString GetModelName();
     void SetModelName(QString modelName);
 
-    void SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed);
+    void SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity,
+                 int shootSpeed, int reloadSpeed, int cleanSpeed, int shotsNum, int bullets_in_the_target);
 
     int get_attackSpeed(int action) override;
     void set_attackSpeed(int value, int action) override;

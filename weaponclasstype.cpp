@@ -2,7 +2,7 @@
 #include <QTimer>
 QTimer *timerA = nullptr;
 QTimer *timerB = nullptr;
-Gun::Gun() : Firearm(6, "Пистолет", 9, 9, 190, 2500, 2500)
+Gun::Gun() : Firearm(6, "Пистолет", 9, 9, 190, 2500, 2500, 0, 0)
 {
 }
 Gun::~Gun()
@@ -28,7 +28,7 @@ QVector<QPoint> Gun::Clean(QString Url) {
 void Gun::accept(Visitor* visitor, QString actionName) {
     visitor->visit(this, actionName);
 }
-MachineGun::MachineGun() : Firearm(5, "Автомат", 100, 100, 100, 3000, 2500)
+MachineGun::MachineGun() : Firearm(5, "Автомат", 100, 100, 100, 3000, 2500, 0, 0)
 {
 }
 MachineGun::~MachineGun()
@@ -54,7 +54,7 @@ QVector<QPoint> MachineGun::Clean(QString Url) {
     QVector<QPoint> v;
     return v;
 }
-Rifle::Rifle() :  Firearm(8, "Винтовка", 9, 9, 1500, 5000, 2500)
+Rifle::Rifle() :  Firearm(8, "Винтовка", 9, 9, 1500, 5000, 2500, 0, 0)
     {
     };
 Rifle::~Rifle()
@@ -80,7 +80,7 @@ QVector<QPoint> Rifle::Clean(QString Url) {
     QVector<QPoint> v;
     return v;
 }
-ShotGun::ShotGun() : Firearm(13, "Дробовик", 7, 7, 1950, 5000, 2500)
+ShotGun::ShotGun() : Firearm(13, "Дробовик", 7, 7, 1950, 5000, 2500, 0, 0)
 {
 }
 

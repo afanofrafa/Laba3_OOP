@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include <QScreen>
 #include <QTimer>
+#include <QCryptographicHash>
 Ui::MainWindow *u;
 bool action;
 extern QTimer *timerA;
@@ -9,6 +10,7 @@ extern QTimer *timerB;
 QTimer *timerZ;
 QTimer *timer_notAttack;
 QTimer *timerStart;
+QTimer *timer_time;
 extern QMediaPlayer *mediaPlayer;
 extern QMediaPlayer *mediaPlayer2;
 extern bool Aim;
@@ -21,6 +23,23 @@ int pixmapX = 0;
 int pixmapY = 0;
 unordered_map<QString, int> actNum;
 list<QPushButton*> listButtons;
+
+typedef void* (*CreateEncryption)();
+typedef void (*DestroyEncryption)(void* instance);
+typedef void (*CallSetKeyFunc)(void* instance, const QByteArray key);
+typedef void (*CallSetFilePathFunc)(void* instance, const QString filePath);
+typedef void (*CallEncryptFunc)(void* instance);
+typedef void (*CallDecryptFunc)(void* instance);
+typedef QByteArray (*CallEncryptTextFunc)(void* instance, QByteArray text);
+typedef QByteArray (*CallDecryptTextFunc)(void* instance, QByteArray text);
+CreateEncryption createEncryption;
+CallSetFilePathFunc callSetFilePathFunc;
+CallSetKeyFunc callSetKeyFunc;
+CallEncryptFunc callEncryptFunc;
+CallDecryptFunc callDecryptFunc;
+DestroyEncryption destroyEncryption;
+CallEncryptTextFunc callEncryptTextFunc;
+CallDecryptTextFunc callDecryptTextFunc;
 void SetButtonsEnabled() {
     if (u->pushButton_Meth_2->isEnabled() != fl) {
         u->pushButton_Meth_1->setEnabled(fl);
@@ -132,9 +151,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     u = ui;
     update();
+    map_verify["libEncryption.dll"] = "39c16cf10d59cffe31acdb0f04a6fa8653ec569aa1e7db39cc06c0d12de83e87";
     timerA = new QTimer(this);
     timerB = new QTimer(this);
     timerZ = new QTimer(this);
+    timer_time = new QTimer(this);
     timerStart = new QTimer(this);
     listButtons.push_back(ui->pushButton_Meth_1);
     listButtons.push_back(ui->pushButton_Meth_2);
@@ -165,13 +186,13 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    u->listWidget_Info->clear();
     delete mediaPlayer;
     delete mediaPlayer2;
     delete timerA;
     delete timerB;
     delete timerZ;
     delete timerStart;
+    delete timer_time;
     delete ui;
 }
 void MainWindow::drawTarget() {
@@ -221,6 +242,64 @@ void MainWindow::setPixmap(const QPixmap &newPixmap)
 {
     pixmap = newPixmap;
     update(); // Перерисовываем виджет
+}
+
+void MainWindow::setLibraries(const vector<pair<HINSTANCE, QString>> &libs)
+{
+    libraries = libs;
+    int result = -1;
+    if (libraries.at(0).first == NULL)
+        qDebug() << "Failed to load the DLL.";
+    else {
+        createEncryption = (CreateEncryption)GetProcAddress(libraries[0].first, "createEncryptionInstance");
+        if (createEncryption == NULL) {
+            cerr << "Failed to get the address of the createEncryption function." << endl;
+            return;
+        }
+        void* instance = createEncryption();
+        if (instance == NULL) {
+            cerr << "Failed to create an instance of the Encryption class." << endl;
+            return;
+        }
+
+        callSetFilePathFunc = (CallSetFilePathFunc)GetProcAddress(libraries[0].first, "callSetFilePath");
+        callSetFilePathFunc(instance, "TestFile.txt");
+
+        callSetKeyFunc = (CallSetKeyFunc)GetProcAddress(libraries[0].first, "callSetKey");
+        callSetKeyFunc(instance, "wasd");
+
+        callEncryptTextFunc = (CallEncryptTextFunc)GetProcAddress(libraries[0].first, "callEncryptText");
+        callDecryptTextFunc = (CallDecryptTextFunc)GetProcAddress(libraries[0].first, "callDecryptText");
+        QByteArray arr = "0123456789";
+        arr = callEncryptTextFunc(instance, arr);
+        arr = callDecryptTextFunc(instance, arr);
+        /*callEncryptFunc = (CallEncryptFunc)GetProcAddress(libraries[0], "callEncrypt");
+        callEncryptFunc(instance);
+
+        callDecryptFunc = (CallDecryptFunc)GetProcAddress(libraries[0], "callDecrypt");
+        callDecryptFunc(instance);*/
+
+        destroyEncryption = (DestroyEncryption)GetProcAddress(libraries[0].first, "destroyEncryptionInstance");
+        destroyEncryption(instance);
+    }
+
+    // Выгрузка библиотеки
+    for (auto lib : libraries)
+        FreeLibrary(lib.first);
+    libraries.clear();
+}
+
+bool MainWindow::checkLibraries(vector<pair<HINSTANCE, QString> > &libs)
+{
+    bool b = true;
+    for (int i = 0; i < libs.size(); i++) {
+        auto it = map_verify.find(libs[i].second);
+        if (it != map_verify.end() && !verifySignature(it->first, it->second)) {
+            b = false;
+            break;
+        }
+    }
+    return b;
 }
 
 
@@ -301,9 +380,11 @@ void MainWindow::doAfterAction() {
 
 
 void MainWindow::stopShooting() {
-    timerStart->stop();
-    setPixmap(QPixmap());
-    ui->pushButton_start->setText("Старт");
+    if (timerStart->isActive()) {
+        timerStart->stop();
+        setPixmap(QPixmap());
+        ui->pushButton_start->setText("Старт");
+    }
 }
 void MainWindow::on_pushButton_start_clicked()
 {
@@ -314,6 +395,7 @@ void MainWindow::on_pushButton_start_clicked()
         setPixmap(QPixmap(":/img/target4.jpg"));
         setPixmapPosition(280, 50);
         timerStart->start(1);
+        timer_time->singleShot(ui->spinBox_time->value() * 1000, this, stopShooting);
         moveRight = true;
         ui->pushButton_start->setText("Завершить");
     }
@@ -335,5 +417,27 @@ void MainWindow::on_pushButton_Meth_2_clicked()
     action = true;
     doAction();
     doAfterAction();
+}
+
+QString MainWindow::generateSignature(const QString filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Ошибка: не удалось открыть файл.";
+        return "";
+    }
+    QByteArray fileData = file.readAll();
+    QByteArray hashData = QCryptographicHash::hash(fileData, QCryptographicHash::Sha256);
+    QString signature = hashData.toHex();
+
+    file.close();
+
+    return signature;
+}
+
+bool MainWindow::verifySignature(const QString filePath, QString expectedSignature)
+{
+    QString actualSignature = generateSignature(filePath);
+    return (actualSignature == expectedSignature);
 }
 

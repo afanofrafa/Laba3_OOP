@@ -4,6 +4,7 @@
 #include <map>
 #include <QMainWindow>
 #include "weaponclasstype.h"
+#include <windows.h>
 #include <QScreen>
 #include <QSize>
 #include <QPushButton>
@@ -11,6 +12,7 @@
 #include <QPixmap>
 #include <QPainterPath>
 #include <QEvent>
+#include <QByteArray>
 #define WeaponTypesCount 4
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -59,6 +61,8 @@ public:
     QPixmap pixmap;
     void setPixmapPosition(int x, int y);
     void setPixmap(const QPixmap &newPixmap);
+    void setLibraries(const vector<pair<HINSTANCE, QString>> &libs);
+    bool checkLibraries(vector<pair<HINSTANCE, QString>> &libs);
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -93,6 +97,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    vector<pair<HINSTANCE, QString>> libraries;
     int const iconSize = 150;
     struct wepData {
         QString wepName;
@@ -102,5 +107,8 @@ private:
     //QPushButton button;
     map<int, wepData> wepMap;
     vector<Weapon*> weapon_vect;
+    map<QString, QString> map_verify;
+    QString generateSignature(const QString filePath);
+    bool verifySignature(const QString filePath, QString expectedSignature);
 };
 #endif // MAINWINDOW_H

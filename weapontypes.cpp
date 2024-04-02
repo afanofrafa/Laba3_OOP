@@ -29,14 +29,34 @@ void Firearm::playSound(QString Url, QMediaPlayer *mediaPlayer) {
     mediaPlayer->setAudioOutput(new QAudioOutput);
     mediaPlayer->play();
 }
+
+int Firearm::get_shotsNum()
+{
+    return shotsNum;
+}
+
+void Firearm::set_shotsNum(int shotsNum)
+{
+    this->shotsNum = shotsNum;
+}
+
+int Firearm::get_bullets_in_the_target()
+{
+    return bullets_in_the_target;
+}
+
+void Firearm::set_bullets_in_the_target(int bullets_in_the_target)
+{
+    this->bullets_in_the_target = bullets_in_the_target;
+}
 Firearm::Firearm()
 {
-    SetInfo(93, "Flamethrower", 40, 40, 1000, 2000, 1000);
+    SetInfo(93, "Flamethrower", 40, 40, 1000, 2000, 1000, 0, 0);
 }
-Firearm::Firearm(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed) {
-    SetInfo(AmmoType, ModelName, PistolCapacity, CurrentPistolCapacity, shootSpeed, reloadSpeed, cleanSpeed);
+Firearm::Firearm(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed, int shotsNum, int bullets_in_the_target) {
+    SetInfo(AmmoType, ModelName, PistolCapacity, CurrentPistolCapacity, shootSpeed, reloadSpeed, cleanSpeed, shotsNum, bullets_in_the_target);
 }
-void Firearm::SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed) {
+void Firearm::SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int CurrentPistolCapacity, int shootSpeed, int reloadSpeed, int cleanSpeed, int shotsNum, int bullets_in_the_target) {
     this->ammoType = AmmoType;
     this->modelName = ModelName;
     this->PistolsCapacity = PistolCapacity;
@@ -44,6 +64,8 @@ void Firearm::SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int C
     this->shootSpeed = shootSpeed;
     this->reloadSpeed = reloadSpeed;
     this->cleanSpeed = cleanSpeed;
+    this->shotsNum = shotsNum;
+    this->bullets_in_the_target = bullets_in_the_target;
 
     SetNewInfo("Калибр: " + QString::number(GetAmmoType()) + "мм");
     SetNewInfo(GetModelName());
@@ -53,6 +75,9 @@ void Firearm::SetInfo(int AmmoType, QString ModelName, int PistolCapacity, int C
     SetNewInfo("Выстрелов в секунду: " + QString::number(1000.0 / shootSpeed, 'f', 2));
     SetNewInfo("Время перезарядки: " + QString::number(reloadSpeed / 1000.0, 'f', 2) + "с");
     SetNewInfo("Время чистки: " + QString::number(cleanSpeed / 1000.0, 'f', 2) + "с");
+    SetNewInfo("Количество выстрелов: " + QString::number(shotsNum));
+    SetNewInfo("Количество попавших выстрелов: " + QString::number(bullets_in_the_target));
+    SetNewInfo("Процент попадания: 0.00%");
 }
 QString Firearm::operator [] (int index) { //Не ипользую ссылку для лишения возможности присваивания через индекс
     return Weapon::GetInfoByIndex(index);
@@ -123,12 +148,15 @@ QVector<QPoint> Firearm::Shoot(int action, QString Url) {
     if (CurrentPistolsCapacity > 0) {
         CurrentPistolsCapacity--;
         playSound(Url, mediaPlayer);
+        SetInfoByIndex(8, "Количество выстрелов: " + QString::number(++shotsNum));
         if (count_distance(widgetPos.x(), widgetPos.y(), pixmapX + 50, pixmapY + 50) <= 50.001) {
             playSound("qrc:/sounds/Penetration.mp3", mediaPlayer2);
+            SetInfoByIndex(9, "Количество попавших выстрелов: " + QString::number(++bullets_in_the_target));
             vect = genShoot(action);
         }
+        SetInfoByIndex(10, "Процент попадания: " + QString::number((float)(bullets_in_the_target) / (float)(shotsNum) * 100.0, 'f', 2) + "%");
+        SetInfoByIndex(3, "Количество оставшихся патронов: " + QString::number(CurrentPistolsCapacity));
     }
-    SetInfoByIndex(3, "Количество оставшихся патронов: " + QString::number(CurrentPistolsCapacity));
     return vect;
 }
 QVector<QPoint> Firearm::Attack(int action) {
